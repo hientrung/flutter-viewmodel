@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:viewmodel/viewmodel.dart';
+import 'package:vmobject/vmobject.dart';
 
 class HomeModel extends ViewModel {
   final Observable<int> count = Observable<int>(1);
