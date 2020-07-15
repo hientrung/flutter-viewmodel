@@ -1,0 +1,6 @@
+#include: package:effective_dart/analysis_options.yaml
+#include: package:pedantic/analysis_options.yaml
+linter:
+  rules:
+    file_names: false
+    avoid_types_on_closure_parameters: false
