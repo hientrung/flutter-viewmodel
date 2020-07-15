@@ -1,6 +1,6 @@
 Base classes used to build Flutter project follow pattern MVVM
 
-![structure](/assets/structure.png)
+![structure](https://raw.githubusercontent.com/hientrung/flutter-viewmodel/master/assets/structure.png)
 
 ## Classes
 
