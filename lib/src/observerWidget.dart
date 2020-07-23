@@ -37,8 +37,10 @@ class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
   @override
   void didUpdateWidget(ObserverWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget != widget) {
+    if (oldWidget.observable != widget.observable) {
       _subscribe();
+    } else {
+      _value = widget.observable.peek;
     }
   }
 

@@ -1,5 +1,9 @@
 # CHANGE LOG
 
+## next
+
+Fix issue check changed in stage of ObserverWidget
+
 ## 1.0.1
 
 fix issue image
