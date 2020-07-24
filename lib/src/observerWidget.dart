@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:obsobject/obsobject.dart';
 
-///An observer of observable to update widget
+///An observer of observables to update widget by an asynchronous processing
+///after all changed done
 class ObserverWidget<T> extends StatefulWidget {
   ///The function use to build widget
   final Widget Function(BuildContext context, T value) builder;
@@ -10,10 +11,13 @@ class ObserverWidget<T> extends StatefulWidget {
   ///Listening on an observable
   final ObservableBase<T> observable;
 
+  ///Listening on computation of some observables
+  final T Function() computation;
+
   ///Create an observer widget
   const ObserverWidget(
-      {Key key, @required this.observable, @required this.builder})
-      : assert(observable != null),
+      {Key key, this.observable, this.computation, @required this.builder})
+      : assert(observable != null || computation != null),
         assert(builder != null),
         super(key: key);
 
@@ -22,51 +26,28 @@ class ObserverWidget<T> extends StatefulWidget {
 }
 
 class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
-  Subscription _subscription;
-  T _value;
+  Computed<T> _computed;
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _value);
+  Widget build(BuildContext context) => widget.builder(context, _computed.peek);
 
   @override
   void initState() {
     super.initState();
-    _subscribe();
-  }
-
-  @override
-  void didUpdateWidget(ObserverWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.observable != widget.observable) {
-      _subscribe();
-    } else {
-      _value = widget.observable.peek;
-    }
+    _computed =
+        Computed(() => widget.observable?.value ?? widget.computation?.call());
+    _computed.changed(() => this.setState(() {}));
   }
 
   @override
   void dispose() {
-    _unsubscribe();
+    _computed?.dispose();
     super.dispose();
-  }
-
-  void _subscribe() {
-    _unsubscribe();
-    _value = widget.observable.peek;
-    _subscription = widget.observable.changed((T v) {
-      setState(() {
-        _value = v;
-      });
-    });
-  }
-
-  void _unsubscribe() {
-    _subscription?.dispose();
   }
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty('value', _value));
+    properties.add(DiagnosticsProperty('value', _computed.peek));
   }
 }

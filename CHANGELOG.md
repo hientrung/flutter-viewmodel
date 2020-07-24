@@ -2,6 +2,7 @@
 
 ## next
 
+Update ObserverWidget to use computed context and config 'computation'
 Fix issue check changed in stage of ObserverWidget
 
 ## 1.0.1
