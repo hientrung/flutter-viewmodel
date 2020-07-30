@@ -36,7 +36,7 @@ class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
     super.initState();
     _computed =
         Computed(() => widget.observable?.value ?? widget.computation?.call());
-    _computed.changed(() => this.setState(() {}));
+    _computed.changed(() => setState(() {}));
   }
 
   @override

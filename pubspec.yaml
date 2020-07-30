@@ -1,7 +1,7 @@
 name: vmobject
 description: >-
   Base classes used to build Flutter project follow pattern MVVM
-version: 1.0.1
+version: 1.1.0
 homepage: https://github.com/hientrung/flutter-viewmodel
 repository: https://github.com/hientrung/flutter-viewmodel
 environment:
@@ -9,7 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  obsobject: ^1.0.0
+  obsobject: ^1.0.6
+
 dev_dependencies:
   #effective_dart: ^1.2.0
   #pedantic: ^1.9.0

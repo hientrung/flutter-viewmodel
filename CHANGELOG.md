@@ -1,7 +1,8 @@
 # CHANGE LOG
 
-## next
+## 1.1.0
 
+Add widget ObserverFormField to working with form field
 Update ObserverWidget to use computed context and config 'computation'
 Fix issue check changed in stage of ObserverWidget
 

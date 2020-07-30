@@ -21,6 +21,21 @@ ObserverWidget(
 
 Dependency on library [obsobject](https://github.com/hientrung/dart-observable)
 
+## ObserverFormField
+
+A widget used to input value for an observable. It can be use for value String, int, double, DateTime.
+
+```dart
+//define observable in viewmodel
+final name = Observable('');
+//used in build context
+ObserverFormField(
+    observable: name,
+    //other options for TextField
+)
+
+```
+
 ### ViewModel
 
 Base class for viewmodel layer
