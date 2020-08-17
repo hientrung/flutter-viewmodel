@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   obsobject: ^1.0.6
+  intl: ^0.16.1
 
 dev_dependencies:
   #effective_dart: ^1.2.0

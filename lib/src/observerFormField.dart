@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vmobject/vmobject.dart';
+import 'package:obsobject/obsobject.dart';
+
+import 'textFormatter.dart';
 
 ///An input to enter value for observable string or number or datetime.
 ///
@@ -12,9 +15,13 @@ class ObserverFormField<T> extends FormField<T> {
   ///Text input type, if null it will use default type base on value type
   final TextInputType keyboardType;
 
+  //Handler format display value
+  final TextFormatter<T> formatter;
+
   ///Create new form field for an observable
   ObserverFormField({
     @required this.observable,
+    this.formatter,
     Key key,
     InputDecoration decoration = const InputDecoration(),
     this.keyboardType,
@@ -44,7 +51,6 @@ class ObserverFormField<T> extends FormField<T> {
     VoidCallback onEditingComplete,
     ValueChanged<String> onFieldSubmitted,
     FormFieldSetter<T> onSaved,
-    List<TextInputFormatter> inputFormatters,
     bool enabled = true,
     double cursorWidth = 2.0,
     Radius cursorRadius,
@@ -63,7 +69,24 @@ class ObserverFormField<T> extends FormField<T> {
           builder: (field) {
             final state = field as _ObserverFormFieldState;
             final effectiveDecoration = (decoration ?? const InputDecoration())
-                .applyDefaults(Theme.of(field.context).inputDecorationTheme);
+                .applyDefaults(Theme.of(state.context).inputDecorationTheme);
+            var fm = formatter;
+            if (fm == null) {
+              switch (T) {
+                case int:
+                  fm = NumberTextFormatter<T>(
+                      fraction: 0,
+                      locale: Localizations.localeOf(state.context));
+                  break;
+                case double:
+                  fm = NumberTextFormatter<T>(
+                      fraction: 2,
+                      locale: Localizations.localeOf(state.context));
+                  break;
+              }
+            }
+            state._formatter = fm;
+            state._controller.text = state._getText(observable.value);
             return TextField(
               controller: state._controller,
               focusNode: state._node,
@@ -98,7 +121,7 @@ class ObserverFormField<T> extends FormField<T> {
               expands: expands,
               maxLength: maxLength,
               onChanged: (val) {
-                final v = _ObserverFormFieldState.getValue<T>(val);
+                final v = state._getValue(val);
                 if (observable is ObservableWritable<T>) {
                   state._updating = true;
                   (observable as ObservableWritable<T>).value = v;
@@ -108,7 +131,7 @@ class ObserverFormField<T> extends FormField<T> {
               onTap: onTap,
               onEditingComplete: onEditingComplete,
               onSubmitted: onFieldSubmitted,
-              inputFormatters: inputFormatters,
+              inputFormatters: <TextInputFormatter>[fm],
               enabled: enabled,
               cursorWidth: cursorWidth,
               cursorRadius: cursorRadius,
@@ -148,11 +171,15 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   ///set default input type
   TextInputType _keyboardType;
 
+  ///current formatter
+  TextFormatter<T> _formatter;
+
   @override
   void initState() {
     super.initState();
     //current text controller
-    _controller = TextEditingController(text: getText(widget.observable.value));
+    _controller =
+        TextEditingController(text: _getText(widget.observable.value));
 
     //default input type
     if (widget.keyboardType != null) {
@@ -192,7 +219,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
       _subChanged = widget.observable.changed(() {
         if (!_updating) {
           setState(() {
-            _controller.text = getText(widget.observable.value);
+            _controller.text = _getText(widget.observable.value);
           });
         } else {
           _updating = false;
@@ -209,7 +236,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
       (widget.observable as ObservableWritable).value = widget.initialValue;
     }
     _mustValidate = false;
-    _controller.text = getText(widget.observable.value);
+    _controller.text = _getText(widget.observable.value);
   }
 
   @override
@@ -249,27 +276,33 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     super.dispose();
   }
 
-  ///convert value to String
-  static String getText(dynamic val) {
-    return val?.toString() ?? '';
+  ///Convert value to string
+  String _getText(T value) {
+    if (_formatter != null) {
+      return _formatter.format(value);
+    }
+    return value?.toString() ?? '';
   }
 
-  ///convert a String to value
-  static S getValue<S>(String val) {
+  ///Parse string to value
+  T _getValue(String text) {
+    if (_formatter != null) {
+      return _formatter.parse(text);
+    }
     dynamic v;
     try {
-      switch (S) {
+      switch (T) {
         case int:
-          v = int.parse(val);
+          v = int.parse(text);
           break;
         case double:
-          v = double.parse(val);
+          v = double.parse(text);
           break;
         case String:
-          v = val;
+          v = text;
           break;
         case DateTime:
-          v = DateTime.parse(val);
+          v = DateTime.parse(text);
           break;
         default:
           v = null;
@@ -279,5 +312,11 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     }
 
     return v;
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty('value', widget.observable.peek));
   }
 }
