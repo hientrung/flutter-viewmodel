@@ -115,10 +115,11 @@ class NumberTextFormatter<T> extends TextFormatter<T> {
 
   @override
   dynamic parse(String text) {
-    if (text == null || text.isEmpty) {
-      return 0;
+    var t = text;
+    if (t == null || t.isEmpty) {
+      t = '0';
     }
-    final v = numberFormat.parse(text);
+    final v = numberFormat.parse(t);
     switch (T) {
       case int:
         return v.toInt();
