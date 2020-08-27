@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:obsobject/obsobject.dart';
 
+import 'observerWidget.dart';
 import 'textFormatter.dart';
 
 ///An input to enter value for observable string or number or datetime.
@@ -87,61 +88,76 @@ class ObserverFormField<T> extends FormField<T> {
             }
             state._formatter = fm;
             state._controller.text = state._getText(observable.value);
-            return TextField(
-              controller: state._controller,
-              focusNode: state._node,
-              decoration:
-                  effectiveDecoration.copyWith(errorText: state.errorText),
-              keyboardType: state._keyboardType,
-              textInputAction: textInputAction,
-              style: style,
-              strutStyle: strutStyle,
-              textAlign: textAlign,
-              textAlignVertical: textAlignVertical,
-              textDirection: textDirection,
-              textCapitalization: textCapitalization,
-              autofocus: autofocus,
-              toolbarOptions: toolbarOptions,
-              readOnly: readOnly,
-              showCursor: showCursor,
-              obscureText: obscureText,
-              autocorrect: autocorrect,
-              smartDashesType: smartDashesType ??
-                  (obscureText
-                      ? SmartDashesType.disabled
-                      : SmartDashesType.enabled),
-              smartQuotesType: smartQuotesType ??
-                  (obscureText
-                      ? SmartQuotesType.disabled
-                      : SmartQuotesType.enabled),
-              enableSuggestions: enableSuggestions,
-              maxLengthEnforced: maxLengthEnforced,
-              maxLines: maxLines,
-              minLines: minLines,
-              expands: expands,
-              maxLength: maxLength,
-              onChanged: (val) {
-                final v = state._getValue(val);
-                if (observable is ObservableWritable<T>) {
-                  state._updating = true;
-                  (observable as ObservableWritable<T>).value = v;
-                }
-                onChanged?.call(v);
-              },
-              onTap: onTap,
-              onEditingComplete: onEditingComplete,
-              onSubmitted: onFieldSubmitted,
-              inputFormatters: <TextInputFormatter>[fm],
-              enabled: enabled,
-              cursorWidth: cursorWidth,
-              cursorRadius: cursorRadius,
-              cursorColor: cursorColor,
-              scrollPadding: scrollPadding,
-              scrollPhysics: scrollPhysics,
-              keyboardAppearance: keyboardAppearance,
-              enableInteractiveSelection: enableInteractiveSelection,
-              buildCounter: buildCounter,
-            );
+            return ObserverWidget<String>(
+                computation: () {
+                  if (!observable.hasValidator) {
+                    return null;
+                  }
+                  observable.isValid.value; //depend
+                  if (!state._mustValidate) {
+                    return null;
+                  } else {
+                    return observable.isValid.message;
+                  }
+                },
+                builder: (context, _) => TextField(
+                      controller: state._controller,
+                      focusNode: state._node,
+                      decoration: effectiveDecoration.copyWith(
+                          errorText: state.errorText),
+                      keyboardType: state._keyboardType,
+                      textInputAction: textInputAction,
+                      style: style,
+                      strutStyle: strutStyle,
+                      textAlign: textAlign,
+                      textAlignVertical: textAlignVertical,
+                      textDirection: textDirection,
+                      textCapitalization: textCapitalization,
+                      autofocus: autofocus,
+                      toolbarOptions: toolbarOptions,
+                      readOnly: readOnly,
+                      showCursor: showCursor,
+                      obscureText: obscureText,
+                      autocorrect: autocorrect,
+                      smartDashesType: smartDashesType ??
+                          (obscureText
+                              ? SmartDashesType.disabled
+                              : SmartDashesType.enabled),
+                      smartQuotesType: smartQuotesType ??
+                          (obscureText
+                              ? SmartQuotesType.disabled
+                              : SmartQuotesType.enabled),
+                      enableSuggestions: enableSuggestions,
+                      maxLengthEnforced: maxLengthEnforced,
+                      maxLines: maxLines,
+                      minLines: minLines,
+                      expands: expands,
+                      maxLength: maxLength,
+                      onChanged: (val) {
+                        if (formatter == null || formatter.isValid(val)) {
+                          final v = state._getValue(val);
+                          if (observable is ObservableWritable<T>) {
+                            state._updating = true;
+                            (observable as ObservableWritable<T>).value = v;
+                          }
+                          onChanged?.call(v);
+                        }
+                      },
+                      onTap: onTap,
+                      onEditingComplete: onEditingComplete,
+                      onSubmitted: onFieldSubmitted,
+                      inputFormatters:
+                          fm == null ? null : <TextInputFormatter>[fm],
+                      enabled: enabled,
+                      cursorWidth: cursorWidth,
+                      cursorRadius: cursorRadius,
+                      cursorColor: cursorColor,
+                      scrollPadding: scrollPadding,
+                      scrollPhysics: scrollPhysics,
+                      keyboardAppearance: keyboardAppearance,
+                      enableInteractiveSelection: enableInteractiveSelection,
+                      buildCounter: buildCounter,
+                    ));
           },
         );
 
@@ -155,9 +171,6 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
 
   ///should validate value or not
   var _mustValidate = false;
-
-  ///listen on status value is valid or not
-  Subscription _subValid;
 
   ///listen on observable value changed
   Subscription _subChanged;
@@ -207,12 +220,6 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
           setState(() {
             _mustValidate = true;
           });
-        }
-      });
-      //instant validate
-      _subValid = widget.observable.isValid.changed(() {
-        if (_mustValidate) {
-          setState(() {});
         }
       });
       //changed outside
@@ -270,7 +277,6 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   @override
   void dispose() {
     _node?.dispose();
-    _subValid?.dispose();
     _subChanged?.dispose();
     _controller?.dispose();
     super.dispose();
