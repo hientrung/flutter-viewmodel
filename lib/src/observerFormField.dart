@@ -216,17 +216,24 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
       }
     }
 
+    _node = FocusNode();
+    _node.addListener(() {
+      //reset if formatter invalid
+      if (!_node.hasFocus &&
+          _formatter != null &&
+          !_formatter.isValid(_controller.text)) {
+        _controller.text = _getText(widget.observable.value);
+      }
+      //validate on lost focus
+      if (widget.observable.hasValidator && !_node.hasFocus && !_mustValidate) {
+        setState(() {
+          _mustValidate = true;
+        });
+      }
+    });
+
     //if observable has validate, setup handlers
     if (widget.observable.hasValidator) {
-      //validate on lost focus
-      _node = FocusNode();
-      _node.addListener(() {
-        if (!_node.hasFocus && !_mustValidate) {
-          setState(() {
-            _mustValidate = true;
-          });
-        }
-      });
       //changed outside
       _subChanged = widget.observable.changed(() {
         if (!_updating) {
