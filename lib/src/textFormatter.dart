@@ -148,7 +148,13 @@ class _StringFormat {
       return value;
     }
 
-    var text = value.text;
+    //override text if can
+    var text = value.text.length <= mask.length
+        ? value.text
+        : value.text.substring(0, value.selection.end) +
+            value.text.substring(
+                value.text.length - mask.length + value.selection.end);
+    //array regexp to check characters
     final arr = <RegExp>[];
     for (var i = 0; i < mask.length; i++) {
       if (keys.containsKey(mask[i])) {
