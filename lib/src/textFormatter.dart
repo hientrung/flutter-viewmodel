@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
-import 'package:intl/number_symbols_data.dart';
 
 abstract class TextFormatter<T> extends TextInputFormatter {
   ///Format value to text
@@ -17,7 +16,7 @@ abstract class TextFormatter<T> extends TextInputFormatter {
 ///Process format number while typing
 class NumberTextFormatter<T> extends TextFormatter<T> {
   ///Current locale
-  final Locale locale;
+  final String locale;
 
   ///Number of fraction allowed
   final int fraction;
@@ -30,18 +29,13 @@ class NumberTextFormatter<T> extends TextFormatter<T> {
   RegExp _regex;
 
   ///Create number formatter used for TextInput
-  NumberTextFormatter({@required this.fraction, @required this.locale}) {
+  NumberTextFormatter({@required this.fraction, this.locale}) {
     //format decimal number
-    final l = locale.toLanguageTag();
-    final code =
-        Intl.verifiedLocale(l, (l) => numberFormatSymbols.containsKey(l));
-    final pt = numberFormatSymbols[code].DECIMAL_PATTERN as String;
-    final arr = pt.split('.');
-    var s = arr[0];
+    var s = '#,##0';
     if (fraction > 0) {
       s += '.'.padRight(fraction + 1, '#');
     }
-    numberFormat = NumberFormat(s, code);
+    numberFormat = NumberFormat(s, locale);
     _decimal = numberFormat.symbols.DECIMAL_SEP;
     _thousand = numberFormat.symbols.GROUP_SEP;
     if (fraction > 0) {

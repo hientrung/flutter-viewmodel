@@ -76,13 +76,13 @@ class ObserverFormField<T> extends FormField<T> {
               switch (T) {
                 case int:
                   fm = NumberTextFormatter<T>(
-                      fraction: 0,
-                      locale: Localizations.localeOf(state.context));
+                    fraction: 0,
+                  );
                   break;
                 case double:
                   fm = NumberTextFormatter<T>(
-                      fraction: 2,
-                      locale: Localizations.localeOf(state.context));
+                    fraction: 2,
+                  );
                   break;
               }
             }
