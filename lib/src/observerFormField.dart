@@ -84,6 +84,9 @@ class ObserverFormField<T> extends FormField<T> {
                     fraction: 2,
                   );
                   break;
+                case DateTime:
+                  fm = DateTimeFormatter() as TextFormatter<T>;
+                  break;
               }
             }
             state._formatter = fm;
@@ -134,7 +137,8 @@ class ObserverFormField<T> extends FormField<T> {
                       expands: expands,
                       maxLength: maxLength,
                       onChanged: (val) {
-                        if (formatter == null || formatter.isValid(val)) {
+                        if (state._formatter == null ||
+                            state._formatter.isValid(val)) {
                           final v = state._getValue(val);
                           if (observable is ObservableWritable<T>) {
                             state._updating = true;
@@ -146,8 +150,9 @@ class ObserverFormField<T> extends FormField<T> {
                       onTap: onTap,
                       onEditingComplete: onEditingComplete,
                       onSubmitted: onFieldSubmitted,
-                      inputFormatters:
-                          fm == null ? null : <TextInputFormatter>[fm],
+                      inputFormatters: state._formatter == null
+                          ? null
+                          : <TextInputFormatter>[state._formatter],
                       enabled: enabled,
                       cursorWidth: cursorWidth,
                       cursorRadius: cursorRadius,

@@ -188,7 +188,7 @@ class _StringFormat {
 
   ///Check current text editing is valid or not
   bool isValid(String text) {
-    if (text == null || text.isEmpty) {
+    if (text == null || text.isEmpty || text == format('')) {
       return true;
     }
     if (text.length != mask.length) {
@@ -278,7 +278,7 @@ class MaskTextFormatter extends TextFormatter<String> {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    if (newValue.text == oldValue.text) return newValue;
+    if (newValue.text == oldValue?.text) return newValue;
     return _fm.formatEdit(newValue);
   }
 
@@ -290,4 +290,97 @@ class MaskTextFormatter extends TextFormatter<String> {
 
   @override
   bool isValid(String text) => _fm.isValid(text);
+}
+
+///Used to handle DateTimeFormatter
+enum DateTimeFormatterType { Date, DateShortTime, DateFullTime }
+
+///Process format DateTime
+class DateTimeFormatter extends TextFormatter<DateTime> {
+  ///Type mask typing
+  final DateTimeFormatterType type;
+
+  ///Current Locale use to format
+  final String locale;
+
+  _StringFormat _fm;
+  DateFormat _dateFormat;
+
+  DateTimeFormatter({this.type = DateTimeFormatterType.Date, this.locale})
+      : assert(type != null) {
+    final d = DateFormat.yMd(locale);
+    switch (type) {
+      case DateTimeFormatterType.Date:
+        _dateFormat = d;
+        break;
+      case DateTimeFormatterType.DateShortTime:
+        _dateFormat = d.add_Hm();
+        break;
+      case DateTimeFormatterType.DateFullTime:
+        _dateFormat = d.add_Hms();
+        break;
+    }
+    var s = _dateFormat.pattern;
+    //rewrite format use full digit
+    s = s
+        .replaceAll(RegExp(r'y+'), 'yyyy')
+        .replaceAll(RegExp(r'M+'), 'MM')
+        .replaceAll(RegExp(r'd+'), 'dd')
+        .replaceAll(RegExp(r'H+'), 'HH')
+        .replaceAll(RegExp(r'j+'), 'HH')
+        .replaceAll(RegExp(r'm+'), 'mm')
+        .replaceAll(RegExp(r's+'), 'ss');
+    _dateFormat = DateFormat(s, locale);
+    //rewrite masked text
+    s = s
+        .replaceAll(RegExp(r'y+'), '0000')
+        .replaceAll(RegExp(r'M+'), '00')
+        .replaceAll(RegExp(r'd+'), '00')
+        .replaceAll(RegExp(r'H+'), '00')
+        .replaceAll(RegExp(r'm+'), '00')
+        .replaceAll(RegExp(r's+'), '00');
+    _fm = _StringFormat(mask: s, keys: <String, RegExp>{'0': RegExp(r'[0-9]')});
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (oldValue?.text == newValue.text) {
+      return newValue;
+    }
+    return _fm.formatEdit(newValue);
+  }
+
+  @override
+  bool isValid(String text) {
+    if (text == null || text.isEmpty || text == format(null)) {
+      return true;
+    }
+    try {
+      var d = _dateFormat.parse(text);
+      return _dateFormat.format(d) == text;
+    } on FormatException catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  String format(DateTime value) {
+    if (value == null) {
+      return _fm.format('');
+    }
+    return _dateFormat.format(value);
+  }
+
+  @override
+  parse(String text) {
+    if (text == null || text.isEmpty) {
+      return null;
+    }
+    try {
+      return _dateFormat.parse(text);
+    } catch (_) {
+      return null;
+    }
+  }
 }
