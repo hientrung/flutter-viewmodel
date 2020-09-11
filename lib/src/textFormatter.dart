@@ -260,6 +260,12 @@ class _StringFormat {
 }
 
 ///Process format masked text
+///
+///Default [keys] use the following wildcard characters
+///- \* : any character
+///- 0 : number only, 0-9
+///- A : letter only, a-zA-Z
+///- \# : number or letter
 class MaskTextFormatter extends TextFormatter<String> {
   final _StringFormat _fm;
   MaskTextFormatter({
@@ -379,7 +385,7 @@ class DateTimeFormatter extends TextFormatter<DateTime> {
   }
 
   @override
-  parse(String text) {
+  dynamic parse(String text) {
     if (text == null || text.isEmpty) {
       return null;
     }

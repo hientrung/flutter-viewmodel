@@ -31,10 +31,19 @@ final name = Observable('');
 //used in build context
 ObserverFormField(
     observable: name,
+    formatter: ...,//optional
     //other options for TextField
 )
 
 ```
+
+This input field has property `formatter` used to format/parse value while user typing, default it created formatter for `int`, `double`, `DateTime` with commonly used properties.
+
+Build-in some class formatters:
+
+- `NumberTextFormatter`: use to format number for observable type `int`, `double`
+- `DateTimeFormatter`: use to format for observable type `DateTime`
+- `MaskTextFormatter`: use like as masked input
 
 ### ViewModel
 
