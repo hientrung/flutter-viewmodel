@@ -21,7 +21,7 @@ abstract class ViewModel extends DiagnosticableTree {
   static final _cached = <Type, ViewModel>{};
 
   ///Get created view model
-  static T of<T extends ViewModel>() => _cached[T];
+  static T? of<T extends ViewModel>() => _cached[T] as T?;
 }
 
 ///Widget base on view model
@@ -33,19 +33,19 @@ abstract class ViewWidget<T extends ViewModel> extends StatelessWidget {
   T initModel();
 
   ///Create view widget
-  const ViewWidget({Key key}) : super(key: key);
+  const ViewWidget({Key? key}) : super(key: key);
 
   ///Use view model as a singleton object or not
   bool get cacheModel => true;
 
   @override
   Widget build(BuildContext context) {
-    return builder(context, ViewModel._cached[T]);
+    return builder(context, ViewModel.of<T>()!);
   }
 
   @override
   StatelessElement createElement() {
-    var model = ViewModel._cached[T];
+    var model = ViewModel.of<T>();
     if (model == null) {
       model = initModel();
       ViewModel._cached[T] = model;
@@ -57,7 +57,7 @@ abstract class ViewWidget<T extends ViewModel> extends StatelessWidget {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties
-        .add(DiagnosticsProperty<T>.lazy('model', () => ViewModel._cached[T]));
+        .add(DiagnosticsProperty<T>.lazy('model', () => ViewModel.of<T>()));
   }
 }
 
@@ -66,7 +66,7 @@ class _ViewWidgetElement extends StatelessElement {
   _ViewWidgetElement(ViewWidget widget, this.model) : super(widget);
 
   @override
-  void mount(Element parent, dynamic newSlot) {
+  void mount(Element? parent, dynamic newSlot) {
     if (model._shouldReactive) {
       model.activate();
     }
@@ -77,7 +77,7 @@ class _ViewWidgetElement extends StatelessElement {
   void unmount() {
     model.dispose();
     if (!(widget as ViewWidget).cacheModel) {
-      ViewModel._cached[model.runtimeType] = null;
+      ViewModel._cached.remove(model.runtimeType);
     }
     super.unmount();
   }

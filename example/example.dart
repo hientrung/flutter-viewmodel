@@ -10,7 +10,7 @@ class HomeModel extends ViewModel {
 }
 
 class HomeView extends ViewWidget<HomeModel> {
-  const HomeView({Key key}) : super(key: key);
+  const HomeView({Key? key}) : super(key: key);
 
   @override
   HomeModel initModel() => HomeModel();

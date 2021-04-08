@@ -1,5 +1,10 @@
 # CHANGE LOG
 
+## 1.3.0
+
+Update to support null safety
+Remove 'computation' in ObserverWidget, use a Computed for 'observable' instead
+
 ## 1.2.0
 
 ObserverFormField added formatter, used to format/parse value while user typing  

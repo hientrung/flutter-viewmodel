@@ -11,43 +11,37 @@ class ObserverWidget<T> extends StatefulWidget {
   ///Listening on an observable
   final ObservableBase<T> observable;
 
-  ///Listening on computation of some observables
-  final T Function() computation;
-
   ///Create an observer widget
   const ObserverWidget(
-      {Key key, this.observable, this.computation, @required this.builder})
-      : assert(observable != null || computation != null),
-        assert(builder != null),
-        super(key: key);
+      {Key? key, required this.observable, required this.builder})
+      : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _ObserverWidgetState<T>();
 }
 
 class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
-  Computed<T> _computed;
+  late Subscription _subscription;
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _computed.peek);
+  Widget build(BuildContext context) =>
+      widget.builder(context, widget.observable.peek);
 
   @override
   void initState() {
     super.initState();
-    _computed =
-        Computed(() => widget.observable?.value ?? widget.computation?.call());
-    _computed.changed(() => setState(() {}));
+    _subscription = widget.observable.changed(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _computed?.dispose();
+    _subscription.dispose();
     super.dispose();
   }
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty('value', _computed.peek));
+    properties.add(DiagnosticsProperty('value', widget.observable.peek));
   }
 }

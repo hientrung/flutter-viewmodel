@@ -2,34 +2,59 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
+///Base class used for text with format/parser
 abstract class TextFormatter<T> extends TextInputFormatter {
   ///Format value to text
   String format(T value);
 
   ///Parser text to value
-  dynamic parse(String text);
+  T parse(String text);
 
   ///Check current text is valid to parse or not
-  bool isValid(String text) => true;
+  bool isValid(String text);
+}
+
+///Process for a plain string
+class StringTextFormatter extends TextFormatter<String> {
+  @override
+  String format(String value) {
+    return value;
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    return newValue;
+  }
+
+  @override
+  bool isValid(String text) {
+    return true;
+  }
+
+  @override
+  String parse(String text) {
+    return text;
+  }
 }
 
 ///Process format number while typing
-class NumberTextFormatter<T> extends TextFormatter<T> {
+class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
   ///Current locale
-  final String locale;
+  final String? locale;
 
   ///Number of fraction allowed
   final int fraction;
 
   ///Current number formatter
-  NumberFormat numberFormat;
-  String _last;
-  String _decimal;
-  String _thousand;
-  RegExp _regex;
+  late NumberFormat numberFormat;
+  late String _last;
+  late String _decimal;
+  late String _thousand;
+  late RegExp _regex;
 
   ///Create number formatter used for TextInput
-  NumberTextFormatter({@required this.fraction, this.locale}) {
+  NumberTextFormatter({required this.fraction, this.locale}) {
     //format decimal number
     var s = '#,##0';
     if (fraction > 0) {
@@ -51,7 +76,7 @@ class NumberTextFormatter<T> extends TextFormatter<T> {
     if (newValue.text == _last) {
       return oldValue;
     }
-    if (newValue.text == null || newValue.text.isEmpty) {
+    if (newValue.text.isEmpty) {
       _last = newValue.text;
       return newValue;
     }
@@ -73,6 +98,8 @@ class NumberTextFormatter<T> extends TextFormatter<T> {
       case double:
         number = double.tryParse(text) ?? 0;
         break;
+      default:
+        throw UnimplementedError();
     }
     text = numberFormat.format(number).trim();
     if (newValue.text.endsWith(_decimal) && !text.contains(_decimal)) {
@@ -111,19 +138,29 @@ class NumberTextFormatter<T> extends TextFormatter<T> {
   }
 
   @override
-  dynamic parse(String text) {
+  T parse(String text) {
     var t = text;
-    if (t == null || t.isEmpty) {
-      t = '0';
+    if (t.isEmpty || !isValid(text)) {
+      if (null is T) {
+        return null as T;
+      } else {
+        return 0 as T;
+      }
     }
-    final v = numberFormat.parse(t);
-    switch (T) {
-      case int:
-        return v.toInt();
-      case double:
-        return v.toDouble();
-      default:
-        return null;
+    return numberFormat.parse(t) as T;
+  }
+
+  @override
+  bool isValid(String text) {
+    if (text.isEmpty) {
+      return true;
+    } else {
+      try {
+        numberFormat.parse(text);
+        return true;
+      } on FormatException {
+        return false;
+      }
     }
   }
 }
@@ -134,17 +171,17 @@ class _StringFormat {
   final String mask;
   final Map<String, RegExp> keys;
   final String holder;
-  final includeLiteral;
+  final bool includeLiteral;
+
   _StringFormat({
-    @required this.mask,
-    @required this.keys,
+    required this.mask,
+    required this.keys,
     this.holder = '_',
     this.includeLiteral = false,
-  })  : assert(holder != null),
-        assert(keys != null);
+  });
 
   TextEditingValue formatEdit(TextEditingValue value) {
-    if (value.text == null || value.text.isEmpty) {
+    if (value.text.isEmpty) {
       return value;
     }
 
@@ -158,7 +195,7 @@ class _StringFormat {
     final arr = <RegExp>[];
     for (var i = 0; i < mask.length; i++) {
       if (keys.containsKey(mask[i])) {
-        arr.add(keys[mask[i]]);
+        arr.add(keys[mask[i]]!);
       }
     }
 
@@ -194,14 +231,14 @@ class _StringFormat {
 
   ///Check current text editing is valid or not
   bool isValid(String text) {
-    if (text == null || text.isEmpty || text == format('')) {
+    if (text.isEmpty || text == format('')) {
       return true;
     }
     if (text.length != mask.length) {
       return false;
     }
     for (var i = 0; i < mask.length; i++) {
-      if (keys.containsKey(mask[i]) && !text[i].contains(keys[mask[i]])) {
+      if (keys.containsKey(mask[i]) && !text[i].contains(keys[mask[i]]!)) {
         return false;
       }
     }
@@ -215,7 +252,7 @@ class _StringFormat {
     for (var i = 0; i < mask.length; i++) {
       if (keys.containsKey(mask[i])) {
         if (c > -1 && c < value.length) {
-          if (value[c].contains(keys[mask[i]])) {
+          if (value[c].contains(keys[mask[i]]!)) {
             s += value[c];
             c++;
           } else {
@@ -237,13 +274,13 @@ class _StringFormat {
 
   ///Parse masked text to raw text
   String parse(String text) {
-    if (text == null || text.isEmpty) {
+    if (text.isEmpty || !isValid(text)) {
       return '';
     }
     var s = '';
     for (var i = 0; i < mask.length; i++) {
       if (keys.containsKey(mask[i])) {
-        if (i < text.length && text[i].contains(keys[mask[i]])) {
+        if (i < text.length && text[i].contains(keys[mask[i]]!)) {
           s += text[i];
         } else {
           //invalid, maybe change mask
@@ -268,13 +305,14 @@ class _StringFormat {
 ///- \# : number or letter
 class MaskTextFormatter extends TextFormatter<String> {
   final _StringFormat _fm;
+
+  ///Create a mask text input
   MaskTextFormatter({
-    @required String mask,
-    Map<String, RegExp> keys,
+    required String mask,
+    Map<String, RegExp>? keys,
     String holder = '_',
     bool includeLiteral = false,
-  })  : assert(mask != null),
-        _fm = _StringFormat(
+  }) : _fm = _StringFormat(
           mask: mask,
           keys: keys ??
               <String, RegExp>{
@@ -290,7 +328,7 @@ class MaskTextFormatter extends TextFormatter<String> {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    if (newValue.text == oldValue?.text) return newValue;
+    if (newValue.text == oldValue.text) return newValue;
     return _fm.formatEdit(newValue);
   }
 
@@ -298,41 +336,50 @@ class MaskTextFormatter extends TextFormatter<String> {
   String format(String value) => _fm.format(value);
 
   @override
-  dynamic parse(String text) => _fm.parse(text);
+  String parse(String text) => _fm.parse(text);
 
   @override
   bool isValid(String text) => _fm.isValid(text);
 }
 
 ///Used to handle DateTimeFormatter
-enum DateTimeFormatterType { Date, DateShortTime, DateFullTime }
+enum DateTimeFormatterType {
+  ///Date part only
+  date,
+
+  ///Date part with hour, minute
+  dateShortTime,
+
+  ///Date and time
+  dateFullTime,
+}
 
 ///Process format DateTime
-class DateTimeFormatter extends TextFormatter<DateTime> {
+class DateTimeFormatter extends TextFormatter<DateTime?> {
   ///Type mask typing
   final DateTimeFormatterType type;
 
   ///Current Locale use to format
-  final String locale;
+  final String? locale;
 
-  _StringFormat _fm;
-  DateFormat _dateFormat;
+  late _StringFormat _fm;
+  late DateFormat _dateFormat;
 
-  DateTimeFormatter({this.type = DateTimeFormatterType.Date, this.locale})
-      : assert(type != null) {
+  ///Create a date/time text input
+  DateTimeFormatter({this.type = DateTimeFormatterType.date, this.locale}) {
     final d = DateFormat.yMd(locale);
     switch (type) {
-      case DateTimeFormatterType.Date:
+      case DateTimeFormatterType.date:
         _dateFormat = d;
         break;
-      case DateTimeFormatterType.DateShortTime:
+      case DateTimeFormatterType.dateShortTime:
         _dateFormat = d.add_Hm();
         break;
-      case DateTimeFormatterType.DateFullTime:
+      case DateTimeFormatterType.dateFullTime:
         _dateFormat = d.add_Hms();
         break;
     }
-    var s = _dateFormat.pattern;
+    var s = _dateFormat.pattern!;
     //rewrite format use full digit
     s = s
         .replaceAll(RegExp(r'y+'), 'yyyy')
@@ -357,7 +404,7 @@ class DateTimeFormatter extends TextFormatter<DateTime> {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    if (oldValue?.text == newValue.text) {
+    if (oldValue.text == newValue.text) {
       return newValue;
     }
     return _fm.formatEdit(newValue);
@@ -365,7 +412,7 @@ class DateTimeFormatter extends TextFormatter<DateTime> {
 
   @override
   bool isValid(String text) {
-    if (text == null || text.isEmpty || text == format(null)) {
+    if (text.isEmpty || text == format(null)) {
       return true;
     }
     try {
@@ -377,7 +424,7 @@ class DateTimeFormatter extends TextFormatter<DateTime> {
   }
 
   @override
-  String format(DateTime value) {
+  String format(DateTime? value) {
     if (value == null) {
       return _fm.format('');
     }
@@ -385,13 +432,13 @@ class DateTimeFormatter extends TextFormatter<DateTime> {
   }
 
   @override
-  dynamic parse(String text) {
-    if (text == null || text.isEmpty) {
+  DateTime? parse(String text) {
+    if (text.isEmpty) {
       return null;
     }
     try {
       return _dateFormat.parse(text);
-    } catch (_) {
+    } on FormatException {
       return null;
     }
   }

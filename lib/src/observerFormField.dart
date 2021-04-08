@@ -14,95 +14,75 @@ class ObserverFormField<T> extends FormField<T> {
   final ObservableBase<T> observable;
 
   ///Text input type, if null it will use default type base on value type
-  final TextInputType keyboardType;
+  final TextInputType? keyboardType;
 
-  //Handler format display value
-  final TextFormatter<T> formatter;
+  ///Handler format display value
+  final TextFormatter<T>? formatter;
 
   ///Create new form field for an observable
   ObserverFormField({
-    @required this.observable,
+    required this.observable,
     this.formatter,
-    Key key,
+    Key? key,
     InputDecoration decoration = const InputDecoration(),
     this.keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.none,
-    TextInputAction textInputAction,
-    TextStyle style,
-    StrutStyle strutStyle,
-    TextDirection textDirection,
+    TextInputAction textInputAction = TextInputAction.none,
+    TextStyle? style,
+    StrutStyle? strutStyle,
+    TextDirection textDirection = TextDirection.ltr,
     TextAlign textAlign = TextAlign.start,
-    TextAlignVertical textAlignVertical,
+    TextAlignVertical? textAlignVertical,
     bool autofocus = false,
     bool readOnly = false,
-    ToolbarOptions toolbarOptions,
-    bool showCursor,
+    ToolbarOptions? toolbarOptions,
+    bool showCursor = true,
     bool obscureText = false,
     bool autocorrect = true,
-    SmartDashesType smartDashesType,
-    SmartQuotesType smartQuotesType,
+    SmartDashesType? smartDashesType,
+    SmartQuotesType? smartQuotesType,
     bool enableSuggestions = true,
-    bool maxLengthEnforced = true,
-    int maxLines = 1,
-    int minLines,
+    int? maxLines = 1,
+    int? minLines,
     bool expands = false,
-    int maxLength,
-    ValueChanged<T> onChanged,
-    GestureTapCallback onTap,
-    VoidCallback onEditingComplete,
-    ValueChanged<String> onFieldSubmitted,
-    FormFieldSetter<T> onSaved,
+    int? maxLength,
+    ValueChanged<T>? onChanged,
+    GestureTapCallback? onTap,
+    VoidCallback? onEditingComplete,
+    ValueChanged<String>? onFieldSubmitted,
+    FormFieldSetter<T>? onSaved,
     bool enabled = true,
     double cursorWidth = 2.0,
-    Radius cursorRadius,
-    Color cursorColor,
-    Brightness keyboardAppearance,
+    Radius? cursorRadius,
+    Color? cursorColor,
+    Brightness? keyboardAppearance,
     EdgeInsets scrollPadding = const EdgeInsets.all(20.0),
     bool enableInteractiveSelection = true,
-    InputCounterWidgetBuilder buildCounter,
-    ScrollPhysics scrollPhysics,
-  })  : assert(T == String || T == int || T == double || T == DateTime),
-        super(
+    InputCounterWidgetBuilder? buildCounter,
+    ScrollPhysics? scrollPhysics,
+  }) : super(
           key: key,
           initialValue: observable.value,
           onSaved: onSaved,
           enabled: enabled,
           builder: (field) {
-            final state = field as _ObserverFormFieldState;
-            final effectiveDecoration = (decoration ?? const InputDecoration())
+            final state = field as _ObserverFormFieldState<T>;
+            final effectiveDecoration = (decoration)
                 .applyDefaults(Theme.of(state.context).inputDecorationTheme);
-            var fm = formatter;
-            if (fm == null) {
-              switch (T) {
-                case int:
-                  fm = NumberTextFormatter<T>(
-                    fraction: 0,
-                  );
-                  break;
-                case double:
-                  fm = NumberTextFormatter<T>(
-                    fraction: 2,
-                  );
-                  break;
-                case DateTime:
-                  fm = DateTimeFormatter() as TextFormatter<T>;
-                  break;
-              }
-            }
-            state._formatter = fm;
             state._controller.text = state._getText(observable.value);
             return ObserverWidget<String>(
-                computation: () {
+                observable: Computed(() {
+                  //it should redraw if change valid status
                   if (!observable.hasValidator) {
-                    return null;
+                    return '';
                   }
                   observable.isValid.value; //depend
                   if (!state._mustValidate) {
-                    return null;
+                    return '';
                   } else {
                     return observable.isValid.message;
                   }
-                },
+                }),
                 builder: (context, _) => TextField(
                       controller: state._controller,
                       focusNode: state._node,
@@ -118,7 +98,7 @@ class ObserverFormField<T> extends FormField<T> {
                       textCapitalization: textCapitalization,
                       autofocus: autofocus,
                       toolbarOptions: toolbarOptions,
-                      readOnly: readOnly,
+                      readOnly: readOnly && observable is ObservableWritable,
                       showCursor: showCursor,
                       obscureText: obscureText,
                       autocorrect: autocorrect,
@@ -131,18 +111,16 @@ class ObserverFormField<T> extends FormField<T> {
                               ? SmartQuotesType.disabled
                               : SmartQuotesType.enabled),
                       enableSuggestions: enableSuggestions,
-                      maxLengthEnforced: maxLengthEnforced,
                       maxLines: maxLines,
                       minLines: minLines,
                       expands: expands,
                       maxLength: maxLength,
                       onChanged: (val) {
-                        if (state._formatter == null ||
-                            state._formatter.isValid(val)) {
+                        if (state._formatter.isValid(val)) {
                           final v = state._getValue(val);
-                          if (observable is ObservableWritable<T>) {
+                          if (observable is ObservableWritable<T> && v is T) {
                             state._updating = true;
-                            (observable as ObservableWritable<T>).value = v;
+                            observable.value = v;
                           }
                           onChanged?.call(v);
                         }
@@ -150,9 +128,7 @@ class ObserverFormField<T> extends FormField<T> {
                       onTap: onTap,
                       onEditingComplete: onEditingComplete,
                       onSubmitted: onFieldSubmitted,
-                      inputFormatters: state._formatter == null
-                          ? null
-                          : <TextInputFormatter>[state._formatter],
+                      inputFormatters: <TextInputFormatter>[state._formatter],
                       enabled: enabled,
                       cursorWidth: cursorWidth,
                       cursorRadius: cursorRadius,
@@ -172,29 +148,51 @@ class ObserverFormField<T> extends FormField<T> {
 
 class _ObserverFormFieldState<T> extends FormFieldState<T> {
   ///handle focus
-  FocusNode _node;
+  late FocusNode _node;
 
   ///should validate value or not
   var _mustValidate = false;
 
   ///listen on observable value changed
-  Subscription _subChanged;
+  Subscription? _subChanged;
 
   ///handle text of text field
-  TextEditingController _controller;
+  late TextEditingController _controller;
 
   ///Set current update observable is internally to avoid rebuild widget
   bool _updating = false;
 
   ///set default input type
-  TextInputType _keyboardType;
+  TextInputType? _keyboardType;
 
   ///current formatter
-  TextFormatter<T> _formatter;
+  late TextFormatter _formatter;
 
   @override
   void initState() {
     super.initState();
+    //current formatter
+    if (widget.formatter != null) {
+      _formatter = widget.formatter!;
+    } else {
+      switch (T) {
+        case int:
+          _formatter = NumberTextFormatter<int?>(
+            fraction: 0,
+          );
+          break;
+        case double:
+          _formatter = NumberTextFormatter<double?>(
+            fraction: 2,
+          );
+          break;
+        case String:
+          _formatter = StringTextFormatter();
+          break;
+        default:
+          throw UnimplementedError('Should provide formatter for text input');
+      }
+    }
     //current text controller
     _controller =
         TextEditingController(text: _getText(widget.observable.value));
@@ -219,9 +217,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     _node = FocusNode();
     _node.addListener(() {
       //reset if formatter invalid
-      if (!_node.hasFocus &&
-          _formatter != null &&
-          !_formatter.isValid(_controller.text)) {
+      if (!_node.hasFocus && !_formatter.isValid(_controller.text)) {
         _controller.text = _getText(widget.observable.value);
       }
       //validate on lost focus
@@ -259,7 +255,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   }
 
   @override
-  ObserverFormField<T> get widget => super.widget as ObserverFormField;
+  ObserverFormField<T> get widget => super.widget as ObserverFormField<T>;
 
   @override
   bool validate() {
@@ -271,7 +267,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   }
 
   @override
-  String get errorText => hasError ? widget.observable.isValid.message : null;
+  String? get errorText => hasError ? widget.observable.isValid.message : null;
 
   @override
   T get value => widget.observable.value;
@@ -283,53 +279,25 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
 
   @override
   bool get isValid => widget.observable.hasValidator
-      ? widget.observable.isValid.validator.validate(value)
+      ? widget.observable.isValid.validator!.validate(value) != null
       : true;
 
   @override
   void dispose() {
-    _node?.dispose();
+    _node.dispose();
     _subChanged?.dispose();
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   ///Convert value to string
-  String _getText(T value) {
-    if (_formatter != null) {
-      return _formatter.format(value);
-    }
-    return value?.toString() ?? '';
+  String _getText(dynamic value) {
+    return _formatter.format(value);
   }
 
   ///Parse string to value
-  T _getValue(String text) {
-    if (_formatter != null) {
-      return _formatter.parse(text);
-    }
-    dynamic v;
-    try {
-      switch (T) {
-        case int:
-          v = int.parse(text);
-          break;
-        case double:
-          v = double.parse(text);
-          break;
-        case String:
-          v = text;
-          break;
-        case DateTime:
-          v = DateTime.parse(text);
-          break;
-        default:
-          v = null;
-      }
-    } catch (ex) {
-      v = null;
-    }
-
-    return v;
+  dynamic _getValue(String text) {
+    return _formatter.parse(text);
   }
 
   @override
