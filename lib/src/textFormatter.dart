@@ -48,13 +48,17 @@ class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
 
   ///Current number formatter
   late NumberFormat numberFormat;
-  late String _last;
+  String _last = '';
   late String _decimal;
   late String _thousand;
   late RegExp _regex;
+  final _type = T.toString();
 
   ///Create number formatter used for TextInput
-  NumberTextFormatter({required this.fraction, this.locale}) {
+  NumberTextFormatter({this.fraction = 0, this.locale}) {
+    if ((_type == 'int' || _type == 'int?') && fraction > 0) {
+      throw Exception("Integer don't accept fraction number");
+    }
     //format decimal number
     var s = '#,##0';
     if (fraction > 0) {
@@ -77,8 +81,14 @@ class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
       return oldValue;
     }
     if (newValue.text.isEmpty) {
-      _last = newValue.text;
-      return newValue;
+      if (null is! T) {
+        _last = '0';
+        return TextEditingValue(
+            text: _last, selection: TextSelection.collapsed(offset: 1));
+      } else {
+        _last = newValue.text;
+        return newValue;
+      }
     }
 
     var text = newValue.text.replaceAll(_thousand, '');
@@ -91,11 +101,13 @@ class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
 
     //convert to number
     num number = 0;
-    switch (T) {
-      case int:
+    switch (_type) {
+      case 'int':
+      case 'int?':
         number = int.tryParse(text) ?? 0;
         break;
-      case double:
+      case 'double':
+      case 'double?':
         number = double.tryParse(text) ?? 0;
         break;
       default:
@@ -132,22 +144,25 @@ class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
   @override
   String format(T value) {
     if (value == null) {
-      return '';
+      if (value is T) {
+        return '';
+      } else {
+        return '0';
+      }
     }
     return numberFormat.format(value);
   }
 
   @override
   T parse(String text) {
-    var t = text;
-    if (t.isEmpty || !isValid(text)) {
+    if (text.isEmpty) {
       if (null is T) {
         return null as T;
       } else {
         return 0 as T;
       }
     }
-    return numberFormat.parse(t) as T;
+    return numberFormat.parse(text) as T;
   }
 
   @override
@@ -188,9 +203,7 @@ class _StringFormat {
     //override text if can
     var text = value.text.length <= mask.length
         ? value.text
-        : value.text.substring(0, value.selection.end) +
-            value.text.substring(
-                value.text.length - mask.length + value.selection.end);
+        : value.text.substring(0, mask.length + 1);
     //array regexp to check characters
     final arr = <RegExp>[];
     for (var i = 0; i < mask.length; i++) {
@@ -355,7 +368,7 @@ enum DateTimeFormatterType {
 }
 
 ///Process format DateTime
-class DateTimeFormatter extends TextFormatter<DateTime?> {
+class DateTimeFormatter<T extends DateTime?> extends TextFormatter<T> {
   ///Type mask typing
   final DateTimeFormatterType type;
 
@@ -412,19 +425,15 @@ class DateTimeFormatter extends TextFormatter<DateTime?> {
 
   @override
   bool isValid(String text) {
-    if (text.isEmpty || text == format(null)) {
-      return true;
-    }
-    try {
-      var d = _dateFormat.parse(text);
-      return _dateFormat.format(d) == text;
-    } on FormatException catch (_) {
-      return false;
+    if (text.isEmpty || text == _fm.format('')) {
+      return null is T;
+    } else {
+      return _fm.isValid(text);
     }
   }
 
   @override
-  String format(DateTime? value) {
+  String format(T value) {
     if (value == null) {
       return _fm.format('');
     }
@@ -432,14 +441,10 @@ class DateTimeFormatter extends TextFormatter<DateTime?> {
   }
 
   @override
-  DateTime? parse(String text) {
-    if (text.isEmpty) {
-      return null;
+  T parse(String text) {
+    if ((text.isEmpty || text == _fm.format('')) && null is T) {
+      return null as T;
     }
-    try {
-      return _dateFormat.parse(text);
-    } on FormatException {
-      return null;
-    }
+    return _dateFormat.parse(text) as T;
   }
 }

@@ -18,6 +18,12 @@ class ObserverWidget<T> extends StatefulWidget {
 
   @override
   State<StatefulWidget> createState() => _ObserverWidgetState<T>();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty('observable', observable.peek));
+  }
 }
 
 class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
@@ -37,11 +43,5 @@ class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
   void dispose() {
     _subscription.dispose();
     super.dispose();
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty('value', widget.observable.peek));
   }
 }

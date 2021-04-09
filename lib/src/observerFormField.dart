@@ -70,24 +70,15 @@ class ObserverFormField<T> extends FormField<T> {
             final effectiveDecoration = (decoration)
                 .applyDefaults(Theme.of(state.context).inputDecorationTheme);
             state._controller.text = state._getText(observable.value);
-            return ObserverWidget<String>(
+            return ObserverWidget<String?>(
                 observable: Computed(() {
-                  //it should redraw if change valid status
-                  if (!observable.hasValidator) {
-                    return '';
-                  }
-                  observable.isValid.value; //depend
-                  if (!state._mustValidate) {
-                    return '';
-                  } else {
-                    return observable.isValid.message;
-                  }
+                  observable.value; //depend
+                  return state.hasError ? state.errorText : null;
                 }),
-                builder: (context, _) => TextField(
+                builder: (context, err) => TextField(
                       controller: state._controller,
                       focusNode: state._node,
-                      decoration: effectiveDecoration.copyWith(
-                          errorText: state.errorText),
+                      decoration: effectiveDecoration.copyWith(errorText: err),
                       keyboardType: state._keyboardType,
                       textInputAction: textInputAction,
                       style: style,
@@ -144,6 +135,12 @@ class ObserverFormField<T> extends FormField<T> {
 
   @override
   FormFieldState<T> createState() => _ObserverFormFieldState<T>();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty('value', observable.peek));
+  }
 }
 
 class _ObserverFormFieldState<T> extends FormFieldState<T> {
@@ -175,19 +172,31 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     if (widget.formatter != null) {
       _formatter = widget.formatter!;
     } else {
-      switch (T) {
-        case int:
-          _formatter = NumberTextFormatter<int?>(
-            fraction: 0,
+      switch (T.toString()) {
+        case 'int':
+          _formatter = NumberTextFormatter<int>();
+          break;
+        case 'int?':
+          _formatter = NumberTextFormatter<int?>();
+          break;
+        case 'double':
+          _formatter = NumberTextFormatter<double>(
+            fraction: 2,
           );
           break;
-        case double:
+        case 'double?':
           _formatter = NumberTextFormatter<double?>(
             fraction: 2,
           );
           break;
-        case String:
+        case 'String':
           _formatter = StringTextFormatter();
+          break;
+        case 'DateTime':
+          _formatter = DateTimeFormatter<DateTime>();
+          break;
+        case 'DateTime?':
+          _formatter = DateTimeFormatter<DateTime?>();
           break;
         default:
           throw UnimplementedError('Should provide formatter for text input');
@@ -201,14 +210,17 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     if (widget.keyboardType != null) {
       _keyboardType = widget.keyboardType;
     } else {
-      switch (T) {
-        case int:
+      switch (T.toString()) {
+        case 'int':
+        case 'int?':
           _keyboardType = TextInputType.number;
           break;
-        case double:
+        case 'double':
+        case 'double?':
           _keyboardType = TextInputType.numberWithOptions(decimal: true);
           break;
-        case DateTime:
+        case 'DateTime':
+        case 'DateTime?':
           _keyboardType = TextInputType.datetime;
           break;
       }
@@ -216,15 +228,15 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
 
     _node = FocusNode();
     _node.addListener(() {
-      //reset if formatter invalid
-      if (!_node.hasFocus && !_formatter.isValid(_controller.text)) {
-        _controller.text = _getText(widget.observable.value);
-      }
       //validate on lost focus
-      if (widget.observable.hasValidator && !_node.hasFocus && !_mustValidate) {
-        setState(() {
+      //or reformat maybe invalid or format value don't same (eg: datetime)
+      if (!_node.hasFocus) {
+        if (widget.observable.hasValidator && !_mustValidate) {
           _mustValidate = true;
-        });
+          widget.observable.notify();
+        } else {
+          _controller.text = _getText(widget.observable.value);
+        }
       }
     });
 
@@ -298,11 +310,5 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   ///Parse string to value
   dynamic _getValue(String text) {
     return _formatter.parse(text);
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty('value', widget.observable.peek));
   }
 }
