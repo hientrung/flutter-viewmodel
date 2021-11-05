@@ -27,7 +27,7 @@ class ObserverWidget<T> extends StatefulWidget {
 }
 
 class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
-  late Subscription _subscription;
+  Subscription? _subscription;
 
   @override
   Widget build(BuildContext context) =>
@@ -36,12 +36,23 @@ class _ObserverWidgetState<T> extends State<ObserverWidget<T>> {
   @override
   void initState() {
     super.initState();
+    _subscribe();
+  }
+
+  @override
+  void didUpdateWidget(covariant ObserverWidget<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.observable != oldWidget.observable) _subscribe();
+  }
+
+  void _subscribe() {
+    _subscription?.dispose();
     _subscription = widget.observable.changed(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _subscription.dispose();
+    _subscription?.dispose();
     super.dispose();
   }
 }

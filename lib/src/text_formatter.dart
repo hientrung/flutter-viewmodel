@@ -84,7 +84,7 @@ class NumberTextFormatter<T extends num?> extends TextFormatter<T> {
       if (null is! T) {
         _last = '0';
         return TextEditingValue(
-            text: _last, selection: TextSelection.collapsed(offset: 1));
+            text: _last, selection: const TextSelection.collapsed(offset: 1));
       } else {
         _last = newValue.text;
         return newValue;

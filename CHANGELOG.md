@@ -1,5 +1,10 @@
 # CHANGE LOG
 
+## 1.4.0
+
+Update packge obsobject
+Update constructor ObserverFormField base on constructor TextField
+
 ## 1.3.0
 
 Update to support null safety

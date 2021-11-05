@@ -32,12 +32,12 @@ final name = Observable('');
 ObserverFormField(
     observable: name,
     formatter: ...,//optional
-    //other options for TextField
+    //other options of TextField
 )
 
 ```
 
-This input field has property `formatter` used to format/parse value while user typing, default it created formatter for `int`, `double`, `DateTime` with commonly used properties.
+This input field has property `formatter` used to format/parse value while user typing, default it created formatter for `int`, `double`, `DateTime` with recommend properties.
 
 Build-in some class formatters:
 

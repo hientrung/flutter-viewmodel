@@ -1,5 +1,5 @@
 export 'package:obsobject/obsobject.dart';
-export 'src/observerFormField.dart';
-export 'src/observerWidget.dart';
-export 'src/textFormatter.dart';
-export 'src/viewModel.dart';
+export 'src/observer_form_field.dart';
+export 'src/observer_widget.dart';
+export 'src/text_formatter.dart';
+export 'src/view_model.dart';
