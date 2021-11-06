@@ -125,6 +125,7 @@ class ObserverFormField<T> extends FormField<T> {
                   if (state._formatter!.isValid(val)) {
                     final v = state._getValue(val);
                     if (observable is ObservableWritable<T> && v is T) {
+                      state._updating = true;
                       observable.value = v;
                     }
                     onChanged?.call(v);
@@ -191,17 +192,22 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
   ///Listen on error
   Computed<String?>? _err;
 
+  ///self update
+  bool _updating = false;
+  Subscription? _subChanged;
+
   void _subscribe([ObserverFormField<T>? old]) {
+    //current error computed
     if (old == null || widget.observable != old.observable) {
-      //current error computed
       _err?.dispose();
       _err = Computed(() {
         if (!_mustValidate.value) return null;
         return widget.observable.error;
       });
     }
+
+    //current formatter
     if (old == null || widget.formatter != old.formatter) {
-      //current formatter
       if (widget.formatter != null) {
         _formatter = widget.formatter!;
       } else {
@@ -236,16 +242,29 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
         }
       }
     }
+
+    //current text controller
     if (old == null ||
         widget.observable != old.observable ||
         widget.formatter != old.formatter) {
-      //current text controller
       _controller?.dispose();
       _controller =
           TextEditingController(text: _getText(widget.observable.value));
     }
+
+    //listen change from outside
+    if (old == null || widget.observable != old.observable) {
+      _subChanged = widget.observable.changed((T v) {
+        if (_updating) {
+          _updating = false;
+          return;
+        }
+        _controller!.text = _getText(v);
+      });
+    }
+
+    //default input type
     if (old == null || widget.keyboardType != old.keyboardType) {
-      //default input type
       if (widget.keyboardType != null) {
         _keyboardType = widget.keyboardType;
       } else {
@@ -323,6 +342,7 @@ class _ObserverFormFieldState<T> extends FormFieldState<T> {
     _controller?.dispose();
     _focusNode?.dispose();
     _err?.dispose();
+    _subChanged?.dispose();
     super.dispose();
   }
 

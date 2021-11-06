@@ -1,5 +1,9 @@
 # CHANGE LOG
 
+## 1.4.1
+
+Fix bug ObserverFormField do not update after change observable value
+
 ## 1.4.0
 
 Update packge obsobject
